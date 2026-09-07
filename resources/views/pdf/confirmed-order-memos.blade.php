@@ -3,28 +3,29 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 8mm; }
+        @page { margin: 5mm; }
 
         * { box-sizing: border-box; }
 
         body {
-            font-family: "DejaVu Sans", sans-serif;
+            font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Urdu Typesetting", "DejaVu Sans", sans-serif;
             font-size: 11px;
             color: #000;
             margin: 0;
+            line-height: 1.1;
         }
 
         table.grid { width: 100%; border-collapse: collapse; }
         table.grid td.cell {
             width: 50%;
             vertical-align: top;
-            padding: 2mm;       /* gap between memos */
+            padding: 0.5mm;     /* smaller gap between memos */
         }
 
         /* ---- Single memo (its own border, hugs its content) ---- */
         .memo {
             border: 1px solid #000;
-            padding: 2.5mm;
+            padding: 1.5mm;
         }
 
         .memo .title {
@@ -32,18 +33,19 @@
             font-weight: bold;
             font-size: 12px;
             text-decoration: underline;
-            margin-bottom: 2mm;
+            margin-bottom: 1mm;
         }
 
-        .memo .hdr { width: 100%; margin-bottom: 1.5mm; border-collapse: collapse; }
+        .memo .hdr { width: 100%; margin-bottom: 1mm; border-collapse: collapse; }
         .memo .hdr td { vertical-align: top; }
-        .memo .hdr td.h-cat  { width: 60%; padding-right: 3mm; }
-        .memo .hdr td.h-date { width: 40%; }
+        .memo .hdr td.h-cat  { width: 62%; padding-right: 2mm; }
+        .memo .hdr td.h-date { width: 38%; }
         .memo .field {
             border-bottom: 1px solid #000;
-            padding: 1px 0;
-            margin-top: 3px;
+            padding: 0.35mm 0;
+            margin-top: 1px;
             font-size: 11px;
+            unicode-bidi: plaintext;
         }
         .memo .field .lbl { font-weight: bold; }
 
@@ -56,19 +58,19 @@
         table.items th,
         table.items td {
             border: 1px solid #000;
-            padding: 2px 3px;
+            padding: 1px 2px;
             font-size: 11px;
             vertical-align: top;
         }
         table.items th { font-weight: bold; text-align: left; }
 
-        .c-sno   { width: 12%; }
-        .c-desc  { width: 50%; }
-        .c-qty   { width: 18%; }
-        .c-price { width: 20%; text-align: right; }
+        .c-sno   { width: 10%; }
+        .c-desc  { width: 54%; unicode-bidi: plaintext; }
+        .c-qty   { width: 16%; white-space: nowrap; }
+        .c-price { width: 20%; text-align: right; white-space: nowrap; }
 
         td.c-desc.sub { padding-left: 12px; }
-        tr.filler td { height: 10px; }
+        tr.filler td { height: 6px; }
 
         /* ---- Total: its own bordered box BELOW the items table ---- */
         table.total-box {
@@ -79,7 +81,7 @@
         }
         table.total-box td {
             border: 1px solid #000;
-            padding: 2px 3px;
+            padding: 1px 2px;
             font-size: 11px;
             vertical-align: top;
         }

@@ -35,10 +35,10 @@
         <tbody>
             @foreach ($memo['rows'] as $row)
                 <tr>
-                    <td class="c-sno">{{ $row['sno'] }}</td>
+                            <td class="c-sno">{{ $row['sno'] }}</td>
                     <td class="c-desc {{ $row['sub'] ? 'sub' : '' }}">{{ $row['desc'] }}</td>
                     <td class="c-qty">{{ $row['qty'] }}</td>
-                    <td class="c-price">&nbsp;</td>
+                    <td class="c-price">{{ $row['price'] }}</td>
                 </tr>
             @endforeach
 
