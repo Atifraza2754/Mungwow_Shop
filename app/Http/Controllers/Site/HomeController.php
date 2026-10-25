@@ -17,8 +17,8 @@ class HomeController extends Controller
             ->orderBy('name')
             ->get();
 
-        $activeCategoryId = null;
-        if ($category) {
+        $activeCategoryId = 'all';
+        if ($category && $category !== 'all') {
             if ($category === 'grocery') {
                 $activeCategoryId = 'grocery';
             } else {
@@ -33,10 +33,6 @@ class HomeController extends Controller
                     $activeCategoryId = $found->id;
                 }
             }
-        }
-
-        if (! $activeCategoryId && $categories->isNotEmpty()) {
-            $activeCategoryId = $categories->first()->id;
         }
 
         $featured = Product::query()
@@ -64,6 +60,16 @@ class HomeController extends Controller
             $productsByCategory[$cat->id] = $list->take(40);
         }
 
-        return view('site.home', compact('categories', 'featured', 'productsByCategory', 'hasMoreByCategory', 'activeCategoryId'));
+        // Products for the "All" tab — first 40, detect if more exist.
+        $allList        = Product::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit(41)
+            ->get();
+        $allHasMore     = $allList->count() > 40;
+        $allProductsFirstPage = $allList->take(40);
+
+        return view('site.home', compact('categories', 'featured', 'productsByCategory', 'hasMoreByCategory', 'activeCategoryId', 'allHasMore', 'allProductsFirstPage'));
     }
 }

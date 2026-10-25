@@ -79,6 +79,37 @@ class ProductController extends Controller
     }
 
     /**
+     * Next batch of ALL active products — drives the "Load more" button when
+     * the "All" tab is active on the home page.
+     */
+    public function ajaxAll(Request $request)
+    {
+        $offset = max(0, (int) $request->query('offset', 0));
+
+        $rows = Product::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->skip($offset)
+            ->take(self::PAGE_SIZE + 1)
+            ->get();
+
+        $hasMore = $rows->count() > self::PAGE_SIZE;
+        $rows    = $rows->take(self::PAGE_SIZE);
+
+        $html = '';
+        foreach ($rows as $product) {
+            $html .= view('site.partials.product-card', ['product' => $product])->render();
+        }
+
+        return response()->json([
+            'html'    => $html,
+            'count'   => $rows->count(),
+            'hasMore' => $hasMore,
+        ]);
+    }
+
+    /**
      * Next batch of products for a single category — drives the per-category
      * "Load more" button on the home page.
      */

@@ -256,10 +256,13 @@
 
     {{-- ============ CATEGORY TABS ============ --}}
     <div class="category-container mb-4" id="categoryTabs">
+        <button class="category-btn {{ ($activeCategoryId === 'all' || empty($activeCategoryId)) ? 'active' : '' }}" data-cat="all" data-slug="all">
+            <i class="fa-solid fa-border-all me-2"></i>All
+        </button>
         @foreach ($categories as $cat)
             @php
                 $slug = \Illuminate\Support\Str::slug($cat->name);
-                $isActive = (string) $cat->id === (string) ($activeCategoryId ?? $categories->first()?->id);
+                $isActive = (string) $cat->id === (string) $activeCategoryId;
             @endphp
             <button class="category-btn {{ $isActive ? 'active' : '' }}" data-cat="{{ $cat->id }}" data-slug="{{ $slug }}">
                 <i class="fa-solid fa-leaf me-2"></i>{{ $cat->name }}
@@ -339,22 +342,30 @@
         </div>
     </div>
 
-    {{-- ============ PRODUCT GRID ============ --}}
-    <div class="row g-3" id="productsGrid">
-        @php
-            $allProducts = collect();
-            foreach ($productsByCategory as $catId => $list) {
-                foreach ($list as $p) $allProducts->push($p);
-            }
-        @endphp
-
-        @forelse ($allProducts as $p)
+    {{-- ============ ALL-TAB PRODUCT GRID (first 40 of all products) ============ --}}
+    <div class="row g-3" id="allProductsGrid" style="{{ ($activeCategoryId !== 'all' && !empty($activeCategoryId)) ? 'display:none;' : '' }}">
+        @forelse ($allProductsFirstPage as $p)
             @include('site.partials.product-card', ['product' => $p])
         @empty
             <div class="no-results">
                 <i class="fa-regular fa-face-frown d-block"></i>
                 No products yet. Add some from the admin panel.
             </div>
+        @endforelse
+    </div>
+
+    {{-- ============ PER-CATEGORY PRODUCT GRID ============ --}}
+    <div class="row g-3" id="productsGrid" style="{{ ($activeCategoryId === 'all' || empty($activeCategoryId)) ? 'display:none;' : '' }}">
+        @php
+            $allProductsFlat = collect();
+            foreach ($productsByCategory as $catId => $list) {
+                foreach ($list as $p) $allProductsFlat->push($p);
+            }
+        @endphp
+
+        @forelse ($allProductsFlat as $p)
+            @include('site.partials.product-card', ['product' => $p])
+        @empty
         @endforelse
     </div>
 
@@ -388,19 +399,23 @@
     const PAGE_SIZE       = 40;
     const SEARCH_URL      = @json(route('site.products.ajaxSearch'));
     const CATEGORY_URL    = @json(url('/ajax/products/category'));
+    const ALL_URL         = @json(url('/ajax/products/all'));
     const hasMoreByCat    = @json($hasMoreByCategory ?? new \stdClass());
     const offsetByCat     = {};
     @foreach ($categories as $cat)
         offsetByCat[{{ $cat->id }}] = 40;
     @endforeach
+    let allOffset      = 40;
+    let allHasMore     = @json($allHasMore ?? false);
     let mode           = 'category';   // 'category' | 'search'
     let lastActiveCat  = currentCat;
     let searchOffset   = 0;
     let searchHasMore  = false;
 
-    const searchGrid   = document.getElementById('searchResultsGrid');
-    const loadMoreWrap = document.getElementById('loadMoreWrap');
-    const loadMoreBtn  = document.getElementById('loadMoreBtn');
+    const searchGrid    = document.getElementById('searchResultsGrid');
+    const allGrid       = document.getElementById('allProductsGrid');
+    const loadMoreWrap  = document.getElementById('loadMoreWrap');
+    const loadMoreBtn   = document.getElementById('loadMoreBtn');
 
     function filter() {
         const q = currentQuery.toLowerCase().trim();
@@ -433,11 +448,9 @@
     function showGrocery(on) {
         if (on) {
             groceryView.style.display = '';
-            grid.style.display = 'none';
             search.parentElement.style.display = 'none';
         } else {
             groceryView.style.display = 'none';
-            grid.style.display = '';
             search.parentElement.style.display = '';
         }
     }
@@ -514,9 +527,10 @@
 
             if (ok) {
                 btn.innerHTML = '<i class="fa-solid fa-check me-2"></i> Added to cart';
-                // update grid card if present
+                // update grid card if present (check both per-category and all-tab grids)
                 try {
-                    const card = document.querySelector('#productsGrid a.product-card[data-product-id="' + productId + '"]');
+                    const card = document.querySelector('#productsGrid a.product-card[data-product-id="' + productId + '"]')
+                              || document.querySelector('#allProductsGrid a.product-card[data-product-id="' + productId + '"]');
                     if (card) {
                         const existingQtyWrap = card.querySelector('.cart-qty-wrap');
                         if (existingQtyWrap) {
@@ -655,7 +669,11 @@
     function setLoadMore() {
         let show = false;
         if (mode === 'category') {
-            show = !!hasMoreByCat[currentCat] && currentCat !== 'grocery' && currentCat !== '';
+            if (currentCat === 'all') {
+                show = allHasMore;
+            } else {
+                show = currentCat !== 'grocery' && currentCat !== '' && !!hasMoreByCat[currentCat];
+            }
         } else if (mode === 'search') {
             show = searchHasMore;
         }
@@ -665,9 +683,8 @@
     const siteBaseUrl = @json(url('/'));
 
     function updateCategoryUrl(slug) {
-        if (!slug) return;
         const cleanBase = siteBaseUrl.replace(/\/+$/, '');
-        const newUrl = cleanBase + '/' + encodeURIComponent(slug);
+        const newUrl = (!slug || slug === 'all') ? cleanBase : (cleanBase + '/' + encodeURIComponent(slug));
         try {
             const currentPath = window.location.pathname.replace(/\/+$/, '');
             const targetPath  = new URL(newUrl).pathname.replace(/\/+$/, '');
@@ -688,8 +705,16 @@
         searchGrid.innerHTML = '';
         if (catId === 'grocery') {
             showGrocery(true);
+            grid.style.display = 'none';
+            allGrid.style.display = 'none';
+        } else if (catId === 'all') {
+            showGrocery(false);
+            grid.style.display = 'none';
+            allGrid.style.display = '';
         } else {
             showGrocery(false);
+            allGrid.style.display = 'none';
+            grid.style.display = '';
             filter();
         }
         setLoadMore();
@@ -706,6 +731,7 @@
         deactivateAllTabs();
         showGrocery(false);
         grid.style.display = 'none';
+        allGrid.style.display = 'none';
         searchGrid.style.display = '';
         setLoadMore();
     }
@@ -766,6 +792,27 @@
         setLoadMore();
     }
 
+    async function loadMoreAll() {
+        try {
+            const res = await fetch(ALL_URL + '?offset=' + allOffset, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await res.json();
+
+            if (data.html && data.html.length) {
+                const tmp = document.createElement('div');
+                tmp.innerHTML = data.html;
+                while (tmp.firstChild) allGrid.appendChild(tmp.firstChild);
+            }
+
+            allOffset  += (data.count || 0);
+            allHasMore  = !!data.hasMore;
+        } catch (e) {
+            allHasMore = false;
+        }
+        setLoadMore();
+    }
+
     loadMoreBtn.addEventListener('click', async () => {
         loadMoreBtn.disabled = true;
         const orig = loadMoreBtn.innerHTML;
@@ -773,6 +820,8 @@
         try {
             if (mode === 'search') {
                 await runSearch(currentQuery.trim(), true);
+            } else if (mode === 'category' && currentCat === 'all') {
+                await loadMoreAll();
             } else if (mode === 'category' && currentCat && currentCat !== 'grocery') {
                 await loadMoreCategory(currentCat);
             }
@@ -901,8 +950,8 @@
         const id = parseInt(btn.dataset.addToCart);
         if (!id) return;
 
-        // Only transform into a qty control for cards inside the home products grid
-        const inProductsGrid = btn.closest('#productsGrid');
+        // Only transform into a qty control for cards inside the home products grid (either category or all tab)
+        const inProductsGrid = btn.closest('#productsGrid') || btn.closest('#allProductsGrid');
         if (!inProductsGrid) {
             // fallback: keep previous behaviour on other pages
             btn.disabled = true;
@@ -942,32 +991,40 @@
         if (!slug && pathParts.length > 0) {
             slug = pathParts[pathParts.length - 1];
         }
+        const cleanBase = siteBaseUrl.replace(/\/+$/, '');
+        const currentPath = window.location.pathname.replace(/\/+$/, '');
+        const basePath = new URL(cleanBase).pathname.replace(/\/+$/, '');
+
+        if (currentPath === basePath || !slug || slug === 'shop') {
+            slug = 'all';
+        }
+
         let btn = slug ? document.querySelector(`.category-btn[data-slug="${slug}"]`) : null;
         if (!btn && slug) {
             btn = document.querySelector(`.category-btn[data-cat="${slug}"]`);
         }
         if (!btn) {
-            btn = document.querySelector('.category-btn');
+            btn = document.querySelector('.category-btn[data-cat="all"]') || document.querySelector('.category-btn');
         }
         if (btn) {
             enterCategoryMode(btn.dataset.cat, false);
         }
     });
 
-    // Execute filter or show grocery immediately on load to show only the active category
+    // Execute filter or show grocery immediately on load
     if (currentCat === 'grocery') {
         showGrocery(true);
-    } else if (currentCat) {
+    } else {
         filter();
     }
 
-    // If currently on base domain/path without a specific category slug in the URL, reflect the active category in the URL
+    // If currently on base domain/path and active category is 'all', ensure clean URL
     try {
         const cleanBase = siteBaseUrl.replace(/\/+$/, '');
         const currentPath = window.location.pathname.replace(/\/+$/, '');
         const basePath = new URL(cleanBase).pathname.replace(/\/+$/, '');
-        if (currentPath === basePath && activeBtn?.dataset?.slug) {
-            window.history.replaceState({ catId: currentCat, catSlug: activeBtn.dataset.slug }, '', cleanBase + '/' + activeBtn.dataset.slug);
+        if (currentPath === basePath && currentCat === 'all') {
+            window.history.replaceState({ catId: 'all', catSlug: 'all' }, '', cleanBase);
         }
     } catch (e) {}
 })();

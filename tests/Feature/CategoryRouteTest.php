@@ -11,6 +11,7 @@ class CategoryRouteTest extends TestCase
     {
         $response = $this->get('/');
         $response->assertStatus(200);
+        $response->assertSee('category-btn active" data-cat="all"', false);
     }
 
     public function test_direct_category_slug_loads_successfully(): void
