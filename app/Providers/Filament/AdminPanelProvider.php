@@ -70,6 +70,10 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::FOOTER,
                 fn (): string => '<div class="gs-footer">Grocery Shop &middot; v0.1 &middot; ' . now()->year . '</div>'
             )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => Blade::render('@include("filament.components.order-sound-notifier")')
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

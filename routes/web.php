@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\OrderNotificationController;
 use App\Http\Controllers\Site\CartController;
 use App\Http\Controllers\Site\CheckoutController;
 use App\Http\Controllers\Site\HomeController;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/',                  [HomeController::class, 'index'])->name('site.home');
+Route::get('/shop/{category?}',  [HomeController::class, 'index'])->name('site.shop');
 
 Route::get('/products/{slug}',   [ProductController::class, 'show'])->name('site.product.show');
 
@@ -51,10 +53,23 @@ Route::post('/track',            [OrderController::class, 'trackLookup'])->name(
 
 /*
 |--------------------------------------------------------------------------
-| Backwards-compatible aliases
+| Backwards-compatible aliases & direct category storefront route
 |--------------------------------------------------------------------------
 */
 Route::get('/home', fn () => redirect()->route('site.home'));
 Route::redirect('/welcome', '/');
 
+// Direct category route (without 'shop' prefix)
+Route::get('/{category}', [HomeController::class, 'index'])->name('site.category');
+
 // Note: /admin routes are owned by Filament — do not redefine here.
+
+/*
+|--------------------------------------------------------------------------
+| Admin real-time notification endpoint
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/admin-api/orders/check-new', [OrderNotificationController::class, 'checkNew'])
+        ->name('admin.orders.checkNew');
+});

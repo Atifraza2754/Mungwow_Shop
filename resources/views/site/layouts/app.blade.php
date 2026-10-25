@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Grocery Shop') — {{ config('app.name') }}</title>
+    <title>@yield('title', 'Mungwow Shop') — {{ config('app.name') }}</title>
 
     {{-- Bootstrap + Font Awesome (matches the design) --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -39,21 +39,26 @@
             position: sticky; top: 0; z-index: 100;
         }
         .brand {
-            font-weight: 800;
-            color: var(--gs-primary);
-            font-size: 1.4rem;
+            display: inline-flex;
+            align-items: center;
             text-decoration: none;
-            letter-spacing: -0.01em;
         }
-        .brand i { margin-right: 6px; }
-
-        /* Allow brand to shrink on small screens and truncate to keep header on one line */
-        .site-header .brand {
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            display: inline-block;
+        .site-logo {
+            height: 42px;
+            width: auto;
+            max-width: 190px;
+            object-fit: contain;
+            display: block;
+            transition: transform 0.2s ease;
+        }
+        .site-logo:hover {
+            transform: scale(1.02);
+        }
+        @media (max-width: 576px) {
+            .site-logo {
+                height: 34px;
+                max-width: 140px;
+            }
         }
 
         .btn-cart {
@@ -178,8 +183,8 @@
 <header class="site-header">
     <div class="container py-3">
         <div class="d-flex align-items-center justify-content-between gap-3 flex-nowrap">
-                <a href="{{ route('site.home') }}" class="brand flex-grow-1 me-2 text-truncate" style="min-width:0;">
-                <i class="fa-solid fa-leaf"></i>{{ config('app.name', 'Grocery Shop') }}
+            <a href="{{ route('site.home') }}" class="brand flex-shrink-0" title="{{ config('app.name', 'Mungwow') }}">
+                <img src="{{ asset('images/logo.png') }}" alt="{{ config('app.name', 'Mungwow') }}" class="site-logo">
             </a>
 
                 <div class="d-flex align-items-center gap-2 flex-shrink-0">

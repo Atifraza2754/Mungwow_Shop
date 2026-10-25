@@ -257,11 +257,15 @@
     {{-- ============ CATEGORY TABS ============ --}}
     <div class="category-container mb-4" id="categoryTabs">
         @foreach ($categories as $cat)
-            <button class="category-btn {{ $loop->first ? 'active' : '' }}" data-cat="{{ $cat->id }}">
+            @php
+                $slug = \Illuminate\Support\Str::slug($cat->name);
+                $isActive = (string) $cat->id === (string) ($activeCategoryId ?? $categories->first()?->id);
+            @endphp
+            <button class="category-btn {{ $isActive ? 'active' : '' }}" data-cat="{{ $cat->id }}" data-slug="{{ $slug }}">
                 <i class="fa-solid fa-leaf me-2"></i>{{ $cat->name }}
             </button>
         @endforeach
-        <button class="category-btn" data-cat="grocery">
+        <button class="category-btn {{ ($activeCategoryId ?? null) === 'grocery' ? 'active' : '' }}" data-cat="grocery" data-slug="grocery">
             <i class="fa-solid fa-cart-shopping me-2"></i>Grocery (custom)
         </button>
     </div>
@@ -558,7 +562,7 @@
         btn.addEventListener('click', () => {
             if (search.value) search.value = '';
             currentQuery = '';
-            enterCategoryMode(btn.dataset.cat);
+            enterCategoryMode(btn.dataset.cat, true);
         });
     });
 
@@ -658,7 +662,24 @@
         loadMoreWrap.style.display = show ? '' : 'none';
     }
 
-    function enterCategoryMode(catId) {
+    const siteBaseUrl = @json(url('/'));
+
+    function updateCategoryUrl(slug) {
+        if (!slug) return;
+        const cleanBase = siteBaseUrl.replace(/\/+$/, '');
+        const newUrl = cleanBase + '/' + encodeURIComponent(slug);
+        try {
+            const currentPath = window.location.pathname.replace(/\/+$/, '');
+            const targetPath  = new URL(newUrl).pathname.replace(/\/+$/, '');
+            if (currentPath !== targetPath) {
+                window.history.pushState({ catId: currentCat, catSlug: slug }, '', newUrl);
+            }
+        } catch (e) {
+            window.history.pushState({ catId: currentCat, catSlug: slug }, '', newUrl);
+        }
+    }
+
+    function enterCategoryMode(catId, pushUrl = true) {
         mode = 'category';
         currentCat = catId;
         if (catId && catId !== 'grocery') lastActiveCat = catId;
@@ -672,6 +693,12 @@
             filter();
         }
         setLoadMore();
+
+        if (pushUrl) {
+            const btn = document.querySelector(`.category-btn[data-cat="${catId}"]`);
+            const slug = btn?.dataset?.slug || catId;
+            updateCategoryUrl(slug);
+        }
     }
 
     function enterSearchMode() {
@@ -908,10 +935,41 @@
         btn.replaceWith(wrap);
     });
 
-    // Execute filter immediately on load to show only the default active category
-    if (currentCat && currentCat !== 'grocery') {
+    // Browser Back / Forward buttons handling
+    window.addEventListener('popstate', (e) => {
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        let slug = e.state?.catSlug;
+        if (!slug && pathParts.length > 0) {
+            slug = pathParts[pathParts.length - 1];
+        }
+        let btn = slug ? document.querySelector(`.category-btn[data-slug="${slug}"]`) : null;
+        if (!btn && slug) {
+            btn = document.querySelector(`.category-btn[data-cat="${slug}"]`);
+        }
+        if (!btn) {
+            btn = document.querySelector('.category-btn');
+        }
+        if (btn) {
+            enterCategoryMode(btn.dataset.cat, false);
+        }
+    });
+
+    // Execute filter or show grocery immediately on load to show only the active category
+    if (currentCat === 'grocery') {
+        showGrocery(true);
+    } else if (currentCat) {
         filter();
     }
+
+    // If currently on base domain/path without a specific category slug in the URL, reflect the active category in the URL
+    try {
+        const cleanBase = siteBaseUrl.replace(/\/+$/, '');
+        const currentPath = window.location.pathname.replace(/\/+$/, '');
+        const basePath = new URL(cleanBase).pathname.replace(/\/+$/, '');
+        if (currentPath === basePath && activeBtn?.dataset?.slug) {
+            window.history.replaceState({ catId: currentCat, catSlug: activeBtn.dataset.slug }, '', cleanBase + '/' + activeBtn.dataset.slug);
+        }
+    } catch (e) {}
 })();
 </script>
 @endpush

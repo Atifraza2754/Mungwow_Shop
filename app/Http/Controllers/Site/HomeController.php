@@ -5,16 +5,39 @@ namespace App\Http\Controllers\Site;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Support\Str;
 
 class HomeController extends Controller
 {
-    public function index()
+    public function index(?string $category = null)
     {
         $categories = Category::query()
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+
+        $activeCategoryId = null;
+        if ($category) {
+            if ($category === 'grocery') {
+                $activeCategoryId = 'grocery';
+            } else {
+                $normalized = Str::slug($category);
+                $found = $categories->first(function ($c) use ($category, $normalized) {
+                    return $c->slug === $category
+                        || Str::slug($c->slug) === $normalized
+                        || Str::slug($c->name) === $normalized;
+                });
+
+                if ($found) {
+                    $activeCategoryId = $found->id;
+                }
+            }
+        }
+
+        if (! $activeCategoryId && $categories->isNotEmpty()) {
+            $activeCategoryId = $categories->first()->id;
+        }
 
         $featured = Product::query()
             ->where('is_active', true)
@@ -41,6 +64,6 @@ class HomeController extends Controller
             $productsByCategory[$cat->id] = $list->take(40);
         }
 
-        return view('site.home', compact('categories', 'featured', 'productsByCategory', 'hasMoreByCategory'));
+        return view('site.home', compact('categories', 'featured', 'productsByCategory', 'hasMoreByCategory', 'activeCategoryId'));
     }
 }
